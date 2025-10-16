@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MOH Dashboard</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #ffffff;
+      --text-light: #212529;
+      --sidebar-light: #f8f9fa;
+      --card-bg-light: #ffffff;
+      --border-light: #dee2e6;
+      --table-stripe-light: rgba(0, 0, 0, 0.05);
+
+      --bg-dark: #1a202c;
+      --text-dark: #e2e8f0;
+      --sidebar-dark: #2d3748;
+      --card-bg-dark: #2d3748;
+      --border-dark: #4a5568;
+      --table-stripe-dark: rgba(255, 255, 255, 0.05);
+    }
+    body {
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark-mode {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    .main-content { margin-left:250px; }
+    .sidebar { width:250px; background-color: var(--sidebar-light); position:fixed; top:0; left:0; height:100vh; }
+    body.dark-mode .sidebar { background-color: var(--sidebar-dark); }
+    body.dark-mode .text-black { color: var(--text-dark) !important; }
+    
+    .card, .modal-content { background-color: var(--card-bg-light); border-color: var(--border-light); }
+    body.dark-mode .card, body.dark-mode .modal-content { background-color: var(--card-bg-dark); border-color: var(--border-dark); }
+    
+    .table { color: var(--text-light); }
+    body.dark-mode .table { color: var(--text-dark); border-color: var(--border-dark); }
+    .table-striped>tbody>tr:nth-of-type(odd)>* { background-color: var(--table-stripe-light); }
+    body.dark-mode .table-striped>tbody>tr:nth-of-type(odd)>* { background-color:#e3e3e3; }
+
+    .form-control { border-color: var(--border-light); }
+    body.dark-mode .form-control { background-color: #4a5568; color: var(--text-dark); border-color: #718096; }
+    body.dark-mode .form-control::placeholder { color: #a0aec0; }
+    body.dark-mode .btn-close { filter: invert(1); }
+
+    .offcanvas { background-color: var(--bg-light); }
+    body.dark-mode .offcanvas { background-color: var(--sidebar-dark); }
+    
+    @media (max-width: 768px){.sidebar{position:static;width:100%;}.main-content{margin-left:0;}}
+    .search-wrapper { position: relative; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; z-index: 1; }
+    #search-bar { padding-left: 40px; }
+    .active-item { background-color: #1a8754 !important; color: #fff !important; }
+  </style>
+</head>
+
+<body>
+  <!-- Session Expired Modal -->
+  <div class="modal fade" id="sessionExpiredModal" tabindex="-1" aria-labelledby="sessionExpiredLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="sessionExpiredLabel">Session expired</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Your session has expired. Please log in again.
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="reloginBtn" class="btn btn-primary">Go to Login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar d-none d-md-flex flex-column p-3 max-vh-100" style="overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; z-index: 1050;">
+      <div style="color: #007438; max-width: 80%; margin: 0 auto 20px auto; display: block;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="img-fluid">
+          <path d="M12 2L1 9l4 1.5V15h2V10.5l5 2.5 5-2.5V15h2V10.5L23 9l-11-7zm0 10.5L6.5 9.5l5.5-2.5 5.5 2.5L12 12.5zM3 17v2h18v-2H3z" />
+        </svg>
+      </div>
+      <img style="width: 120px;display: block;margin-left: auto;margin-right: auto;" src="./components/img/logo.png" alt="">
+      <h2 id="dashboard-title" class="text-center text-black" style="margin-top: 20px; margin-bottom: 20px; cursor: pointer; transition: all 0.3s ease;">Dashboard</h2>
+      <div class="search-wrapper mb-3">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="search-bar" class="form-control" placeholder="Search by Reference or Name" style="font-size: 14px;" />
+      </div>
+      <ul class="nav flex-column flex-grow-1" id="data-list" style="font-size: 12px;"></ul>
+      
+      <button id="theme-toggle" class="btn btn-outline-secondary mt-3 mb-2 d-flex align-items-center justify-content-center gap-2">
+        <i class="bi"></i> <!-- Icon will be set by JS -->
+        <span>Toggle Theme</span>
+      </button>
+
+      <button id="logoutButton" class="btn btn-danger d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+
+    <!-- Toggle for mobile -->
+    <button class="btn d-md-none m-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" aria-controls="offcanvasSidebar"
+            style="width: 50px; height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; z-index: 1050; position: relative; background-color: white;">
+      <i class="bi bi-list" style="font-size: 25px;"></i>
+    </button>
+
+    <!-- Offcanvas Sidebar -->
+    <div class="offcanvas offcanvas-start text-dark" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
+      <!-- Mobile sidebar content can be mirrored here if needed -->
+    </div>
+
+    <!-- Main -->
+    <div class="flex-grow-1 overflow-auto p-4 d-flex align-items-center justify-content-center flex-column min-vh-100 main-content">
+      <header class="d-flex justify-content-end p-3" style="position: fixed; width: 100%; top: 0; left: 0; z-index: 1000; align-items: center;">
+        <div style="height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold;">
+          Admin Dashboard
+        </div>
+      </header>
+
+      <div class="input-container d-flex flex-column align-items-center" style="max-width: 1200px; width: 100%;">
+        <h3 class="text-center mb-4" id="typewriter"></h3>
+        <div class="container my-5" style="display: flex; flex-direction: column; padding: 10px; border-radius: 10px;"></div>
+      </div>
+
+      <div id="stickyText" style="position: fixed; bottom: 25px; right: 100px; background-color: #892e1c; color: #ffffff; padding: 15px 20px; border-radius: 30px; font-family: Arial, sans-serif; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px;">
+        <span>To add a new request, click here </span>
+        <i class="bi bi-arrow-right-circle" style="font-size: 1.5rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.botpress.cloud/webchat/v2.2/inject.js"></script>
+  <script src="https://files.bpcontent.cloud/2025/02/03/11/20250203113133-UV8I6Y2D.js"></script>
+
+
+
+  <script>
+    // ---------- Theme helpers ----------
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeIcon = themeToggleBtn.querySelector('i');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+        themeIcon.classList.remove('bi-sun-fill');
+        themeIcon.classList.add('bi-moon-stars-fill');
+      } else {
+        document.body.classList.remove('dark-mode');
+        themeIcon.classList.remove('bi-moon-stars-fill');
+        themeIcon.classList.add('bi-sun-fill');
+      }
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      applyTheme(newTheme);
+    }
+
+    // ---------- Auth helpers ----------
+    const TOKEN_KEY = 'authToken';
+    const EXP_KEY   = 'authTokenExpiry';
+    let authGuardTriggered = false;
+    let allUsers = [];
+
+    function getToken(){ return localStorage.getItem(TOKEN_KEY); }
+    function clearAuth(){ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(EXP_KEY); }
+
+    function decodeJwtExp(token){
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload && typeof payload.exp === 'number') return payload.exp * 1000;
+      } catch(_) {}
+      return null;
+    }
+
+    function isTokenValid(){
+      const token = getToken();
+      if (!token) return false;
+      const stored = localStorage.getItem(EXP_KEY);
+      let exp = stored ? Number(stored) : decodeJwtExp(token);
+      if (!exp) return true;
+      return Date.now() < exp;
+    }
+
+    function redirectToLoginWithModal(){
+      if (authGuardTriggered) return;
+      authGuardTriggered = true;
+
+      const modalEl = document.getElementById('sessionExpiredModal');
+      const bsModal = new bootstrap.Modal(modalEl, { backdrop:'static', keyboard:false });
+      bsModal.show();
+
+      document.getElementById('reloginBtn').onclick = () => {
+        clearAuth();
+        location.replace('/#/login');
+      };
+
+      modalEl.addEventListener('hidden.bs.modal', () => {
+        clearAuth();
+        location.replace('/#/login');
+      }, { once:true });
+    }
+
+    function hardRedirectToLogin(){
+      clearAuth();
+      location.replace('/#/login');
+    }
+
+    async function fetchWithAuth(url, options = {}) {
+      const token = getToken();
+      const headers = new Headers(options.headers || {});
+      if (token) headers.set('Authorization', 'Bearer ' + token);
+
+      const finalOptions = { ...options, headers };
+
+      try {
+        const resp = await fetch(url, finalOptions);
+        if ([401, 402, 403].includes(resp.status)) {
+          redirectToLoginWithModal();
+          throw new Error('Auth error: ' + resp.status);
+        }
+        const data = await resp.json();
+        return { ok: resp.ok, status: resp.status, data };
+      } catch (err) {
+        console.error('fetchWithAuth error:', err);
+        throw err;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Apply theme on initial load
+      let savedTheme = localStorage.getItem('theme');
+      if (!savedTheme) {
+        savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      applyTheme(savedTheme);
+      
+      if (!isTokenValid()) {
+        hardRedirectToLogin();
+        return;
+      }
+
+      const text = "What can I help with?";
+      const typewriterElement = document.getElementById("typewriter");
+      let idx = 0;
+      (function typeWriter(){
+        if (idx < text.length) {
+          typewriterElement.textContent += text.charAt(idx++);
+          setTimeout(typeWriter, 100);
+        }
+      })();
+      
+      themeToggleBtn.addEventListener('click', toggleTheme);
+      document.getElementById('logoutButton').addEventListener('click', hardRedirectToLogin);
+      document.getElementById('dashboard-title').addEventListener('click', () => filterAndRenderUsers(''));
+
+      renderData();
+    });
+
+    async function fetchUsersSecure() {
+      try {
+          const response = await fetchWithAuth('https://medical-permits.vercel.app/getAllUsersData');
+          const data = response.data;
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.users)) return data.users;
+          return [];
+      } catch (error) {
+          console.error("Failed to fetch users:", error);
+          return [];
+      }
+    }
+    
+    function filterAndRenderUsers(query = ''){
+        const dataList = document.getElementById('data-list');
+        const filtered = allUsers.filter(u =>
+          String(u.reference_number).toLowerCase().includes(query.toLowerCase()) ||
+          String(u.patient_name || '').toLowerCase().includes(query.toLowerCase())
+        );
+        dataList.innerHTML = '';
+        filtered.forEach(u => dataList.appendChild(createListItem(u)));
+        showTable(filtered);
+    }
+
+    async function renderData(){
+      allUsers = await fetchUsersSecure();
+      document.getElementById('search-bar').addEventListener('input', (e) => filterAndRenderUsers(e.target.value));
+      filterAndRenderUsers('');
+    }
+
+    function showTable(users){
+      const container = document.querySelector('.container.my-5');
+      if (!container) return;
+      container.innerHTML = `
+        <h3 style="font-size:1.5rem;margin-bottom:20px;">Users List</h3>
+        <table class="table table-striped table-bordered table-hover" style="box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+          <thead style="background-color:#007438;color:white;">
+            <tr>
+              <th style="padding:12px;font-weight:bold;">Reference Number</th>
+              <th style="padding:12px;font-weight:bold;">Patient Name</th>
+              <th style="padding:12px;font-weight:bold;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              users.map(u => `
+                <tr>
+                  <td style="padding:12px;">${u.reference_number}</td>
+                  <td style="padding:12px;">${u.patient_name}</td>
+                  <td style="padding:12px;">${u.status}</td>
+                </tr>
+              `).join('')
+            }
+          </tbody>
+        </table>`;
+    }
+
+    function createListItem(user){
+      const listItem = document.createElement('li');
+      listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+      listItem.style.border = 'none';
+      listItem.style.backgroundColor = 'transparent';
+      listItem.style.marginBottom = '20px';
+      listItem.style.cursor = 'pointer';
+
+      listItem.addEventListener('mouseenter', () => {
+        if (!listItem.classList.contains('active-item')) listItem.style.backgroundColor = 'rgba(0,0,0,0.1)';
+      });
+      listItem.addEventListener('mouseleave', () => {
+        if (!listItem.classList.contains('active-item')) listItem.style.backgroundColor = 'transparent';
+      });
+
+      const userInfo = document.createElement('span');
+      userInfo.textContent = `${user.reference_number} - ${(user.patient_name && user.patient_name.trim()) ? user.patient_name : user.passport_no}`;
+
+      const badge = document.createElement('span');
+      badge.className = `badge rounded-circle ${user.status === 'rejected' ? 'bg-danger' : user.status === 'pending' ? 'bg-warning' : 'bg-success'}`;
+      badge.style.width = '10px'; badge.style.height = '10px'; badge.innerHTML = '&nbsp;';
+
+      listItem.appendChild(userInfo);
+      listItem.appendChild(badge);
+
+      listItem.addEventListener('click', () => {
+        document.querySelectorAll('#data-list li').forEach(i => {
+          i.classList.remove('active-item');
+          i.style.color = document.body.classList.contains('dark-mode') ? 'var(--text-dark)' : 'var(--text-light)';
+        });
+        listItem.classList.add('active-item');
+        showUserDetails(user);
+      });
+      return listItem;
+    }
+    
+    // showUserDetails and other functions remain the same
+    function cleanFileUrl(rawUrl){
+      const urlMatch = rawUrl?.match(/https?:\/\/[^\s]+/);
+      return urlMatch ? encodeURI(urlMatch[0]) : null;
+    }
+
+    function updatePreview(previewId, placeholderId, downloadId, fileUrl, fileName = ''){
+      const previewElement = document.getElementById(previewId);
+      const placeholderElement = document.getElementById(placeholderId);
+      const downloadElement = document.getElementById(downloadId);
+
+      if (fileUrl) {
+        placeholderElement.style.display = 'none';
+        const ext = String(fileUrl).split('.').pop().toLowerCase();
+        previewElement.innerHTML = (ext === 'pdf')
+          ? `<div class="d-flex justify-content-center align-items-center h-100">
+               <img src="https://icon-library.com/images/doc-icon/doc-icon-4.jpg" alt="PDF Icon" style="width: 80%; height: 80%; object-fit: contain;">
+             </div>`
+          : `<img src="${fileUrl}" alt="Image Preview" style="width:100%;height:100%;object-fit:cover;">`;
+        downloadElement.href = fileUrl;
+        downloadElement.download = fileName || fileUrl.split('/').pop();
+        downloadElement.disabled = false;
+      } else {
+        placeholderElement.style.display = 'block';
+        previewElement.innerHTML = '';
+        downloadElement.disabled = true;
+      }
+    }
+
+    function showUserDetails(user){
+      const container = document.querySelector('.container.my-5');
+      if (!container) return;
+
+      const authorizationLetter = cleanFileUrl(user.authorization_letter);
+      const medicalDoc = cleanFileUrl(user.medical_doc);
+
+      container.innerHTML = `
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white"><h3 class="mb-0">Edit User Details</h3></div>
+          <div class="card-body">
+            <form id="userDetailsForm">
+              <div class="row">
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Reference Number:</strong></label><input type="text" class="form-control" value="${user.reference_number}" readonly></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Status:</strong></label><input type="text" class="form-control" value="${user.status}" readonly></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Patient Name:</strong></label><input type="text" class="form-control" name="patientName" value="${user.patient_name || 'N/A'}"></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>ID Number:</strong></label><input type="text" class="form-control" value="${user.passport_no}" readonly></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Phone Number:</strong></label><input type="text" class="form-control" name="phoneNumber" value="${user.phone_number || 'N/A'}"></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Primary Doctor:</strong></label><input type="text" class="form-control" name="primaryDoctor" value="${user.primary_doctor || 'N/A'}"></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>E-mail Address:</strong></label><input type="email" class="form-control" name="emailAddress" value="${user.email_address || 'N/A'}"></div>
+                <div class="col-md-6 mb-3"><label class="form-label"><strong>Country:</strong></label><input type="text" class="form-control" name="country" value="${user.country || 'N/A'}"></div>
+                <div class="col-md-12 mb-3"><label class="form-label"><strong>Reject Reason:</strong></label><textarea class="form-control" name="rejectReason" rows="2">${user.rejectReason || ''}</textarea></div>
+              </div>
+              <hr/>
+              <div class="d-flex justify-content-between">
+                <div class="col-md-6 me-3">
+                  <p><strong>Authorization Letter:</strong></p>
+                  <div class="file-preview" id="authPreview" style="width: 100%; height: 200px; border: 1px dashed #ddd; border-radius: 5px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted" id="authPlaceholder">Missing</span>
+                  </div>
+                  <a href="#" id="authDownload" class="btn btn-outline-primary btn-sm w-100 mt-2" target="_blank" disabled>Download</a>
+                  <input type="file" id="authUpload" class="d-none" accept=".pdf,.png,.jpeg,.jpg">
+                  <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="document.getElementById('authUpload').click()">Upload</button>
+                </div>
+
+                <div class="col-md-6">
+                  <p><strong>Medical Document:</strong></p>
+                  <div class="file-preview" id="medicalPreview" style="width: 100%; height: 200px; border: 1px dashed #ddd; border-radius: 5px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted" id="medicalPlaceholder">Missing</span>
+                  </div>
+                  <a href="#" id="medicalDownload" class="btn btn-outline-primary btn-sm w-100 mt-2" target="_blank" disabled>Download</a>
+                  <input type="file" id="medicalUpload" class="d-none" accept=".pdf,.png,.jpeg,.jpg">
+                  <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="document.getElementById('medicalUpload').click()">Upload</button>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end mt-4">
+                <button type="submit" class="btn btn-success">Save Changes</button>
+                <button type="button" class="btn btn-secondary ms-2" onclick="filterAndRenderUsers('')">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      try {
+        if (medicalDoc) updatePreview('medicalPreview','medicalPlaceholder','medicalDownload',medicalDoc);
+        if (authorizationLetter) updatePreview('authPreview','authPlaceholder','authDownload',authorizationLetter);
+      } catch(e){ console.error('Preview init error:', e); }
+
+      document.getElementById('authUpload').addEventListener('change', (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        updatePreview('authPreview','authPlaceholder','authDownload',URL.createObjectURL(f),f.name);
+      });
+      document.getElementById('medicalUpload').addEventListener('change', (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        updatePreview('medicalPreview','medicalPlaceholder','medicalDownload',URL.createObjectURL(f),f.name);
+      });
+
+      document.getElementById('userDetailsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        fd.append('referenceNumber', user.reference_number); // Add reference number for update
+        const authFile = document.getElementById('authUpload').files[0];
+        const medFile  = document.getElementById('medicalUpload').files[0];
+        if (authFile) fd.append('authorization_letter', authFile);
+        if (medFile)  fd.append('medical_doc', medFile);
+
+        try {
+          const res = await fetchWithAuth(`https://medical-permits.vercel.app/updateData/${user.reference_number}`, { method: 'PUT', body: fd });
+          if (res.ok) { alert('Data updated!'); location.reload(); } else { alert('Update failed.'); }
+        } catch (err) { console.error('Update error:', err); if (!authGuardTriggered) alert('An error occurred.'); }
+      });
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'd-flex gap-2 mt-3';
+      ['Approve','Reject','Pending'].forEach((label) => {
+        const b = document.createElement('button');
+        b.className = `btn btn-${label==='Approve'?'success':label==='Reject'?'danger':'warning'} btn-sm`;
+        b.textContent = label;
+        b.onclick = () => {
+          if (label==='Approve') approveUser(user);
+          if (label==='Reject') rejectUser(user);
+          if (label==='Pending') markAsPending(user);
+        };
+        btnRow.appendChild(b);
+      });
+      container.appendChild(btnRow);
+    }
+
+    async function statusUpdate(user, status, reason = null) {
+      const payload = { status };
+      if (reason) payload.rejectReason = reason;
+      try {
+        const res = await fetchWithAuth(`https://medical-permits.vercel.app/update/${user.reference_number}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) { alert(`Status updated to ${status}!`); location.reload(); }
+      } catch(e){ console.error('Status update error:', e); }
+    }
+
+    function approveUser(user){ statusUpdate(user, 'approved'); }
+    function markAsPending(user){ statusUpdate(user, 'pending'); }
+    function rejectUser(user){
+      const reason = prompt('Enter reason for rejection:');
+      if (reason) statusUpdate(user, 'rejected', reason);
+    }
+  </script>
+</body>
+</html>

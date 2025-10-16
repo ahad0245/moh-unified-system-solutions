@@ -1,0 +1,5 @@
+{
+  "name": "MOH Unified System Solutions",
+  "description": "A web application for the Ministry of Health featuring public-facing chatbot access and a private admin dashboard for user management.",
+  "requestFramePermissions": []
+}
