@@ -2,8 +2,8 @@ import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { MOHLogo } from './icons/MOHLogo';
 import { useTheme } from '../context/ThemeContext';
-import { SunIcon } from './icons/SunIcon';
-import { MoonIcon } from './icons/MoonIcon';
+import { SunIcon } from './icons/Sunicon';
+import { MoonIcon } from './icons/Moonicon';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
