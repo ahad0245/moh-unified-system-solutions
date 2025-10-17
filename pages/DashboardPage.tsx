@@ -188,7 +188,7 @@ const DashboardPage: React.FC = () => {
     if (!isTokenValid()) {
       // Mimic HTML: hard redirect to login
       clearAuth();
-      window.location.replace('/#/login');
+      window.location.replace('/login');
     }
   }, []);
 
@@ -278,7 +278,7 @@ const DashboardPage: React.FC = () => {
 
   const onClickLogout = () => {
     clearAuth();
-    window.location.replace('/#/login');
+    window.location.replace('/login');
   };
 
   const onApprove = async (u: UserRecord) => {
@@ -527,14 +527,14 @@ const DashboardPage: React.FC = () => {
                 <button type="button" className="btn-close btn-close-white" aria-label="Close" onClick={() => {
                   setSessionModalOpen(false);
                   clearAuth();
-                  window.location.replace('/#/login');
+                  window.location.replace('/login');
                 }} />
               </div>
               <div className="modal-body">Your session has expired. Please log in again.</div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-primary" onClick={() => {
                   clearAuth();
-                  window.location.replace('/#/login');
+                  window.location.replace('/login');
                 }}>Go to Login</button>
               </div>
             </div>
