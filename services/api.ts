@@ -25,7 +25,6 @@ export const getAllUsers = async (token: string): Promise<User[]> => {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
     },
   });
 
@@ -37,6 +36,12 @@ export const getAllUsers = async (token: string): Promise<User[]> => {
   }
 
   const data = await response.json();
-  // The API returns an object with a `users` key which is an array
+  
+  // The API might return the user array directly, or nested under a `users` key.
+  // This logic handles both common response structures.
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
   return data.users || [];
 };
